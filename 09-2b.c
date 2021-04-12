@@ -16,14 +16,14 @@ int main()
   int   semid;
   char pathname[]="09-2a.c";
   key_t key;
-  struct sembuf mybuf[2];
+  struct sembuf mybuf;
 
   if ((key = ftok(pathname,0)) < 0) {
     printf("Can\'t generate key\n");
     exit(-1);
   }
 
-  if ((semid = semget(key, 2, 0666 | IPC_CREAT)) < 0) {
+  if ((semid = semget(key, 1, 0666 | IPC_CREAT)) < 0) {
     printf("Can\'t create semaphore set\n");
     exit(-1);
   }
@@ -47,17 +47,17 @@ int main()
   }
 
 
-  mybuf[1].sem_num = 0;
-  mybuf[1].sem_op  = 0;
-  mybuf[1].sem_flg = 0;
-  if (semop(semid, &mybuf[1], 1) < 0) {
+  mybuf.sem_num = 0;
+  mybuf.sem_op  = 0;
+  mybuf.sem_flg = 0;
+  if (semop(semid, &mybuf, 1) < 0) {
     printf("Can\'t change semaphores\n");
     exit(-1);
   }
-  mybuf[0].sem_num = 0;
-  mybuf[0].sem_op  = 1;
-  mybuf[0].sem_flg = 0;
-  if (semop(semid, &mybuf[0], 1) < 0) {
+  mybuf.sem_num = 0;
+  mybuf.sem_op  = 1;
+  mybuf.sem_flg = 0;
+  if (semop(semid, &mybuf, 1) < 0) {
     printf("Can\'t change semaphores\n");
     exit(-1);
   }
@@ -76,10 +76,10 @@ int main()
     ("Program 1 was spawn %d times, program 2 - %d times, total - %d times\n",
     array[0], array[1], array[2]);
 
-  mybuf[0].sem_num = 0;
-  mybuf[0].sem_op  = -1;
-  mybuf[0].sem_flg = 0;
-  if (semop(semid, &mybuf[0], 1) < 0) {
+  mybuf.sem_num = 0;
+  mybuf.sem_op  = -1;
+  mybuf.sem_flg = 0;
+  if (semop(semid, &mybuf, 1) < 0) {
     printf("Can\'t change semaphores\n");
     exit(-1);
   }
