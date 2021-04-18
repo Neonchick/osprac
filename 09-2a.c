@@ -23,9 +23,24 @@ int main()
     exit(-1);
   }
 
-  if ((semid = semget(key, 1, 0666 | IPC_CREAT)) < 0) {
-    printf("Can\'t create semaphore set\n");
-    exit(-1);
+  if ((semid = semget(key, 1, 0666 | IPC_CREAT | IPC_EXCL)) < 0) {
+    if (errno != EEXIST) {
+      printf("Can\'t create semaphore set\n");
+      exit(-1);
+    } else {
+      if ((semid = semget(key, 1, 0666 | IPC_CREAT)) < 0) {
+        printf("Can\'t find semaphore set\n");
+        exit(-1);
+      }
+    }
+  } else {
+      mybuf.sem_num = 0;
+      mybuf.sem_op  = 1;
+      mybuf.sem_flg = 0;
+      if (semop(semid, &mybuf, 1) < 0) {
+        printf("Can\'t change semaphores\n");
+        exit(-1);
+      }
   }
 
   if ((shmid = shmget(key, 3*sizeof(int), 0666|IPC_CREAT|IPC_EXCL)) < 0) {
@@ -46,16 +61,8 @@ int main()
     exit(-1);
   }
 
-
   mybuf.sem_num = 0;
-  mybuf.sem_op  = 0;
-  mybuf.sem_flg = 0;
-  if (semop(semid, &mybuf, 1) < 0) {
-    printf("Can\'t change semaphores\n");
-    exit(-1);
-  }
-  mybuf.sem_num = 0;
-  mybuf.sem_op  = 1;
+  mybuf.sem_op  = -1;
   mybuf.sem_flg = 0;
   if (semop(semid, &mybuf, 1) < 0) {
     printf("Can\'t change semaphores\n");
@@ -77,7 +84,7 @@ int main()
     array[0], array[1], array[2]);
 
   mybuf.sem_num = 0;
-  mybuf.sem_op  = -1;
+  mybuf.sem_op  = 1;
   mybuf.sem_flg = 0;
   if (semop(semid, &mybuf, 1) < 0) {
     printf("Can\'t change semaphores\n");
