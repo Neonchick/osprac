@@ -7,23 +7,17 @@
 
 // Схематично программа имеет следующую логику:
 // Логика родителя:
-// D(1)
 // Запись
 // A(2)
-// D(3)
-// Чтение 
-// А(1)
+// Z()
+// Чтение
 // Логика ребенка:
-// D(2)
+// D(1)
 // Чтение
 // Запись
-// А(3)
-// В начале семафор инициализируется 1
-// Дальше D(1) родителя заканчивает блокировку и родитель начинает запись
-// Дальше родитель делает A(2), чтобы ребенок разблокировался от D(2) и начал чтение и запись
-// Дальше ребенок делает А(3), чтобы родитель разблокировался от D(3) и начал чтение
-// Дальше родитель делает А(1), чтобы родитель смог корректно начать следующую итерацию
-
+// D(1)
+// Родитель делает запись, делает А(2) и Z() блокируясь пока не вычтут 2
+// Ребенок ждет перед чтением первым D(1) и уведомляет о записи вторым D(1)
 
 int main()
 {
@@ -40,24 +34,9 @@ int main()
     exit(-1);
   }
 
-  if ((semid = semget(key, 1, 0666 | IPC_CREAT | IPC_EXCL)) < 0) {
-    if (errno != EEXIST) {
-      printf("Can\'t create semaphore set\n");
-      exit(-1);
-    } else {
-      if ((semid = semget(key, 1, 0666 | IPC_CREAT)) < 0) {
-        printf("Can\'t find semaphore set\n");
-        exit(-1);
-      }
-    }
-  } else {
-      mybuf.sem_num = 0;
-      mybuf.sem_op  = 1;
-      mybuf.sem_flg = 0;
-      if (semop(semid, &mybuf, 1) < 0) {
-        printf("Can\'t change semaphores\n");
-        exit(-1);
-      }
+  if ((semid = semget(key, 1, 0666 | IPC_CREAT)) < 0) {
+    printf("Can\'t create semaphore set\n");
+    exit(-1);
   }
 
   printf("Write n:\n");
@@ -81,15 +60,6 @@ int main()
    /* Parent process */
     for (int i=1; i<=n; i++) {
 
-      mybuf.sem_num = 0;
-      mybuf.sem_op  = -1;
-      mybuf.sem_flg = 0;
-
-      if (semop(semid, &mybuf, 1) < 0) {
-        printf("Can\'t add to semaphore\n");
-        exit(-1);
-      }
-
       size = write(fd[1], "Parent message", 15);
 
       if (size != 15) {
@@ -109,11 +79,11 @@ int main()
       }
 
       mybuf.sem_num = 0;
-      mybuf.sem_op  = -3;
+      mybuf.sem_op  = 0;
       mybuf.sem_flg = 0;
 
       if (semop(semid, &mybuf, 1) < 0) {
-        printf("Can\'t minus to semaphore\n");
+        printf("Can\'t add to semaphore\n");
         exit(-1);
       }
 
@@ -125,15 +95,6 @@ int main()
       }
 
       printf("Parent read: \'%s\' for the %d time\n", resstring, i);
-
-      mybuf.sem_num = 0;
-      mybuf.sem_op  = 1;
-      mybuf.sem_flg = 0;
-
-      if (semop(semid, &mybuf, 1) < 0) {
-        printf("Can\'t minus to semaphore\n");
-        exit(-1);
-      }
 
     }
 
@@ -153,7 +114,7 @@ int main()
     for (int i=1; i<=n; i++) {
 
       mybuf.sem_num = 0;
-      mybuf.sem_op  = -2;
+      mybuf.sem_op  = -1;
       mybuf.sem_flg = 0;
 
       if (semop(semid, &mybuf, 1) < 0) {
@@ -180,7 +141,7 @@ int main()
       printf("Child write for the %d time\n", i);
 
       mybuf.sem_num = 0;
-      mybuf.sem_op  = 3;
+      mybuf.sem_op  = -1;
       mybuf.sem_flg = 0;
 
       if (semop(semid, &mybuf, 1) < 0) {
